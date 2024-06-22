@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "lib": ["es2020", "ESNext"],
+    "module": "CommonJS",
+    "target": "es2020",
+    "outDir": "dist",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true
+  },
+  "files": ["build.ts"]
+}
