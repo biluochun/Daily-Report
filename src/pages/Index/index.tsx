@@ -54,7 +54,7 @@ export const PageIndex: React.FC<{}> = (props) => {
     const options = {
       title: { text: '' },
       tooltip: {
-        hideDelay: 1000000,
+        // hideDelay: 1000000,
         trigger: 'axis',
         formatter: (params: any[], ticket: string) => {
           console.log(ticket, params);
