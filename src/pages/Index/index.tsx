@@ -17,7 +17,8 @@ const req = fetch(`https://docs.google.com/spreadsheets/d/${GlobalVar.GoogleShee
   console.log(lines);
   const json: Record<string, string | number>[] = [];
   const header = lines.shift()?.filter((a) => a);
-  lines.forEach((line) => {
+  lines.forEach((line, lIndex) => {
+    // 日期还没填写的行,暂时不显示
     if (!line[0]) return;
     const data: Record<string, string | number> = {};
     let total = 0;
@@ -26,7 +27,7 @@ const req = fetch(`https://docs.google.com/spreadsheets/d/${GlobalVar.GoogleShee
       if (key === '日期') {
         data[key] = line[index];
       } else {
-        const val = parseFloat(line[index].replace(/,/g, '')) || 0;
+        const val = parseFloat((line[index] || lines[lIndex - 1][index] || '0').replace(/,/g, ''));
         data[key] = val;
         total += val;
         data['总计'] = total;
