@@ -2,35 +2,69 @@ import React, { CSSProperties, useEffect, useMemo, useRef, useState } from 'reac
 import styled from 'styled-components';
 import { Dropdown, MenuProps, Segmented, Select } from 'antd';
 import { AppLayout } from 'src/layout';
-import { fetchJson } from 'src/utils';
+import { fetchJson, localStorageEffect } from 'src/utils';
 import { usePromise } from 'src/hook/usePromise';
 import { ECharts } from 'src/components/ECharts';
 import * as echarts from 'echarts';
+import { GlobalVar } from 'src/constants';
+import { atom, useRecoilState } from 'recoil';
 
-const req = fetchJson('/BTC-ETF.json');
+// fetchJson('/BTC-ETF.json');
+const req = fetch(`https://docs.google.com/spreadsheets/d/${GlobalVar.GoogleSheetsId}/gviz/tq?tqx=out:csv&sheet=${GlobalVar.SheetsName}`).then(async (res) => {
+  const text = await res.text();
+  const lines: string[][] = text.split('\n').map((a) => a.replace(/^"/, '').replace(/"$/, '').split(`","`));
+  console.log(lines);
+  const json: Record<string, string | number>[] = [];
+  const header = lines.shift()?.filter((a) => a);
+  lines.forEach((line) => {
+    if (!line[0]) return;
+    const data: Record<string, string | number> = {};
+    let total = 0;
+    header?.forEach((key, index) => {
+      if (['总计', '日变动率'].includes(key)) return;
+      if (key === '日期') {
+        data[key] = line[index];
+      } else {
+        const val = parseFloat(line[index].replace(/,/g, '')) || 0;
+        data[key] = val;
+        total += val;
+        data['总计'] = total;
+      }
+    });
+    json.push(data);
+  });
+  return json;
+});
+
+export const stateCacheBtcEtfs = atom({
+  key: 'stateCacheBtcEtfs',
+  default: null as null | any[],
+  effects_UNSTABLE: [localStorageEffect('stateCacheBtcEtfs')],
+});
 
 export const PageIndex: React.FC<{}> = (props) => {
-  const data: any[] = usePromise(req);
+  const lastData: any[] | null = usePromise(req);
+  const [cache, _cache] = useRecoilState(stateCacheBtcEtfs);
+  useEffect(() => {
+    if (!lastData) return;
+    _cache(lastData);
+  }, [lastData]);
+
+  const data = useMemo(() => {
+    if (lastData) return lastData;
+    return cache;
+  }, [cache, lastData]);
+
   const options = useMemo(() => {
     if (!data?.[0]) return null;
     const last = data[data.length - 1];
-    const list: string[] = Object.keys(last).filter((key) => key !== 'date');
+    const list: string[] = Object.keys(last).filter((key) => key !== '日期');
     list.sort((a, b) => last[b] - last[a]);
-    const dates = data.map((d) => d.date);
-    const total = data.map((d) => {
-      let s = 0;
-      for (let key in d) {
-        if (key === 'date') continue;
-        s += d[key];
-      }
-      if (!d.Total) d.Total = s;
-      return s;
-    });
-    if (list[0] !== 'Total') list.unshift('Total');
+    const dates = data.map((d) => d['日期']);
     const series = list.map((name) => {
       let yAxisIndex = 0;
       const ext = {} as any;
-      if (name === 'Total') {
+      if (name === '总计') {
         yAxisIndex = 1;
         Object.assign(ext, {
           areaStyle: {
@@ -57,7 +91,6 @@ export const PageIndex: React.FC<{}> = (props) => {
         // hideDelay: 1000000,
         trigger: 'axis',
         formatter: (params: any[], ticket: string) => {
-          console.log(ticket, params);
           if (!params || !params.length) return null;
           const items = params.map((item) => {
             const diff = item.value - data[item.dataIndex - 1]?.[item.seriesName];
@@ -91,6 +124,20 @@ export const PageIndex: React.FC<{}> = (props) => {
   return (
     <AppLayout>
       <PageIndexStyle>
+        <h4 style={{ padding: '0 30px' }}>
+          当前数据(实时)来源于由{' '}
+          <a href="https://twitter.com/Phyrex_Ni" target="_blank" rel="external noreferrer">
+            @Phyrex_Ni
+          </a>{' '}
+          和{' '}
+          <a href="https://twitter.com/follow_clues" target="_blank" rel="external noreferrer">
+            @follow_clues
+          </a>{' '}
+          创建并维护的 google sheets{' '}
+          <a href="https://docs.google.com/spreadsheets/d/1jf5CmR-z8T9ldP0APSrofMBC_hxViJ8DWqPtopRcYeI/edit?gid=486385649#gid=486385649" target="_blank" rel="external noreferrer">
+            现货ETF数据跟踪统计表
+          </a>
+        </h4>
         <ECharts style={{ width: '100vw', height: 600, paddingTop: 100 }} options={options} />
       </PageIndexStyle>
     </AppLayout>
