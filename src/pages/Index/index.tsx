@@ -27,8 +27,11 @@ const req = fetch(`https://docs.google.com/spreadsheets/d/${GlobalVar.GoogleShee
       if (key === '日期') {
         data[key] = line[index];
       } else {
-        const val = parseFloat((line[index] || lines[lIndex - 1][index] || '0').replace(/,/g, ''));
+        const value = line[index];
+        const prevValue = lines[lIndex - 1]?.[index] || '0';
+        const val = parseFloat((value || prevValue).replace(/,/g, ''));
         data[key] = val;
+        data[`${key}_updated`] = value ? 'true' : 'false';
         total += val;
         data['总计'] = total;
       }
@@ -60,8 +63,12 @@ export const PageIndex: React.FC<{}> = (props) => {
   const options = useMemo(() => {
     if (!data?.[0]) return null;
     const last = data[data.length - 1];
-    const list: string[] = Object.keys(last).filter((key) => key !== '日期');
-    list.sort((a, b) => last[b] - last[a]);
+    const list: string[] = Object.keys(last).filter((key) => key !== '日期' && !key.match(/_updated/));
+    list.sort((a, b) => {
+      // if (last[`${b}_updated`] === 'false') return -1;
+      // if (last[`${a}_updated`] === 'false') return 1;
+      return last[b] - last[a];
+    });
     const dates = data.map((d) => d['日期']);
     const series = list.map((name) => {
       let yAxisIndex = 0;
@@ -97,8 +104,12 @@ export const PageIndex: React.FC<{}> = (props) => {
           const items = params.map((item) => {
             const diff = item.value - data[item.dataIndex - 1]?.[item.seriesName];
             let prevStr = '';
-            if (diff > 0) prevStr = `<span style="color: green;margin-right: 4px;">(+${diff.toLocaleString()})</span>`;
-            if (diff < 0) prevStr = `<span style="color: red;margin-right: 4px;">(${diff.toLocaleString()})</span>`;
+            if (data[item.dataIndex]?.[`${item.seriesName}_updated`] === 'false') {
+              prevStr = `<span style="color: #999;margin-right: 4px;">(?)</span>`;
+            } else {
+              if (diff > 0) prevStr = `<span style="color: green;margin-right: 4px;">(+${diff.toLocaleString()})</span>`;
+              if (diff < 0) prevStr = `<span style="color: red;margin-right: 4px;">(${diff.toLocaleString()})</span>`;
+            }
             return `<div style="display:flex;justify-content: space-between;">
             <div>${item.marker} ${item.seriesName}</div>
             <div>${prevStr}${item.value.toLocaleString()}</div>
