@@ -11,35 +11,38 @@ import { atom, useRecoilState } from 'recoil';
 import { ETFsTable } from 'src/components/ETFsTable';
 
 // fetchJson('/BTC-ETF.json');
-const req = fetch(`https://docs.google.com/spreadsheets/d/${GlobalVar.GoogleSheetsId}/gviz/tq?tqx=out:csv&sheet=${GlobalVar.SheetsName}`).then(async (res) => {
-  const text = await res.text();
-  const lines: string[][] = text.split('\n').map((a) => a.replace(/^"/, '').replace(/"$/, '').split(`","`));
-  console.log(lines);
-  const json: Record<string, string | number>[] = [];
-  const header = lines.shift()?.filter((a) => a);
-  lines.forEach((line, lIndex) => {
-    // 日期还没填写的行,暂时不显示
-    if (!line[0]) return;
-    const data: Record<string, string | number> = {};
-    let total = 0;
-    header?.forEach((key, index) => {
-      if (['总计', '日变动率'].includes(key)) return;
-      if (key === '日期') {
-        data[key] = line[index];
-      } else {
-        const value = line[index];
-        const prevValue = lines[lIndex - 1]?.[index] || '0';
-        const val = parseFloat((value || prevValue).replace(/,/g, ''));
-        data[key] = val;
-        data[`${key}_updated`] = value ? 'true' : 'false';
-        total += val;
-        data['总计'] = total;
-      }
+const fetchData = () => {
+  return fetch(`https://docs.google.com/spreadsheets/d/${GlobalVar.GoogleSheetsId}/gviz/tq?tqx=out:csv&sheet=${GlobalVar.SheetsName}`).then(async (res) => {
+    const text = await res.text();
+    const lines: string[][] = text.split('\n').map((a) => a.replace(/^"/, '').replace(/"$/, '').split(`","`));
+    console.log(lines);
+    const json: Record<string, string | number>[] = [];
+    const header = lines.shift()?.filter((a) => a);
+    lines.forEach((line, lIndex) => {
+      // 日期还没填写的行,暂时不显示
+      if (!line[0]) return;
+      const data: Record<string, string | number> = {};
+      let total = 0;
+      header?.forEach((key, index) => {
+        if (['总计', '日变动率'].includes(key)) return;
+        if (key === '日期') {
+          data[key] = line[index];
+        } else {
+          const value = line[index];
+          const prevValue = lines[lIndex - 1]?.[index] || '0';
+          const val = parseFloat((value || prevValue).replace(/,/g, ''));
+          data[key] = val;
+          data[`${key}_updated`] = value ? 'true' : 'false';
+          total += val;
+          data['总计'] = total;
+        }
+      });
+      json.push(data);
     });
-    json.push(data);
+    return json;
   });
-  return json;
-});
+};
+let req = fetchData();
 
 export const stateCacheBtcEtfs = atom({
   key: 'stateCacheBtcEtfs',
@@ -48,7 +51,16 @@ export const stateCacheBtcEtfs = atom({
 });
 
 export const PageIndex: React.FC<{}> = (props) => {
-  const lastData: any[] | null = usePromise(req);
+  const [query, _query] = useState(req);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      _query(fetchData());
+    }, 30000);
+    return () => {
+      clearInterval(timer);
+    };
+  }, []);
+  const lastData: any[] | null = usePromise(query);
   const [cache, _cache] = useRecoilState(stateCacheBtcEtfs);
   useEffect(() => {
     if (!lastData) return;
