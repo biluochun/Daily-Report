@@ -8,6 +8,7 @@ import { ECharts } from 'src/components/ECharts';
 import * as echarts from 'echarts';
 import { GlobalVar } from 'src/constants';
 import { atom, useRecoilState } from 'recoil';
+import { ETFsTable } from 'src/components/ETFsTable';
 
 // fetchJson('/BTC-ETF.json');
 const req = fetch(`https://docs.google.com/spreadsheets/d/${GlobalVar.GoogleSheetsId}/gviz/tq?tqx=out:csv&sheet=${GlobalVar.SheetsName}`).then(async (res) => {
@@ -95,15 +96,15 @@ export const PageIndex: React.FC<{}> = (props) => {
           const items = params.map((item) => {
             const diff = item.value - data[item.dataIndex - 1]?.[item.seriesName];
             let prevStr = '';
-            if (diff > 0) prevStr = `<span style="color: green;margin-right: 4px;">(+${diff})</span>`;
-            if (diff < 0) prevStr = `<span style="color: red;margin-right: 4px;">(${diff})</span>`;
+            if (diff > 0) prevStr = `<span style="color: green;margin-right: 4px;">(+${diff.toLocaleString()})</span>`;
+            if (diff < 0) prevStr = `<span style="color: red;margin-right: 4px;">(${diff.toLocaleString()})</span>`;
             return `<div style="display:flex;justify-content: space-between;">
             <div>${item.marker} ${item.seriesName}</div>
-            <div>${prevStr}${item.value}</div>
+            <div>${prevStr}${item.value.toLocaleString()}</div>
             </div>`;
           });
           return `<div>
-          <div>${params[0].axisValue}</div>
+          <div>${params[0].axisValue} 单位(BTC)</div>
           ${items.join(' ')}
           </div>`;
         },
@@ -125,7 +126,7 @@ export const PageIndex: React.FC<{}> = (props) => {
     <AppLayout>
       <PageIndexStyle>
         <h4 style={{ padding: '0 30px' }}>
-          当前数据(实时)来源于由{' '}
+          当前数据来源于由{' '}
           <a href="https://twitter.com/Phyrex_Ni" target="_blank" rel="external noreferrer">
             @Phyrex_Ni
           </a>{' '}
@@ -139,6 +140,7 @@ export const PageIndex: React.FC<{}> = (props) => {
           </a>
         </h4>
         <ECharts style={{ width: '100vw', height: 600, paddingTop: 100 }} options={options} />
+        {/* <ETFsTable data={data} /> */}
       </PageIndexStyle>
     </AppLayout>
   );
@@ -147,4 +149,5 @@ export const PageIndex: React.FC<{}> = (props) => {
 const PageIndexStyle = styled.div`
   width: 100vw;
   min-height: 100vh;
+  padding-bottom: 300px;
 `;
