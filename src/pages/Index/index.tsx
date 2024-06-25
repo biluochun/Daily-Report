@@ -111,6 +111,10 @@ export const PageIndex: React.FC<{}> = (props) => {
       tooltip: {
         // hideDelay: 1000000,
         trigger: 'axis',
+        position: function (point: any, params: any, dom: any, rect: any, size: any) {
+          console.log(point, size);
+          return [point[0] - size.contentSize[0] - 50, '10%'];
+        },
         formatter: (params: any[], ticket: string) => {
           if (!params || !params.length) return null;
           const items = params.map((item) => {
@@ -129,6 +133,10 @@ export const PageIndex: React.FC<{}> = (props) => {
           });
           return `<div>
           <div>${params[0].axisValue} 单位(BTC)</div>
+          <div style="display:flex;justify-content: space-between;">
+            <div>ETF</div>
+            <div>(对比前一次增减)当前持有BTC总量</div>
+          </div>
           ${items.join(' ')}
           </div>`;
         },
