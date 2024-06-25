@@ -112,7 +112,6 @@ export const PageIndex: React.FC<{}> = (props) => {
         // hideDelay: 1000000,
         trigger: 'axis',
         position: function (point: any, params: any, dom: any, rect: any, size: any) {
-          console.log(point, size);
           return [point[0] - size.contentSize[0] - 50, '10%'];
         },
         formatter: (params: any[], ticket: string) => {
